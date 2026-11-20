@@ -33,7 +33,7 @@ placed, and every third tsunami cycle a Golden Runaway appears — placing it pa
 - **Rarity ladder (8 rarities)** — Common (x1 income) → Uncommon (x2) → Rare (x3) → Epic (x8) →
   Legendary (x20) → Divine (x80) → Mythic (x50) → Brainrot (x150),
   rolled by spawn weight every time a character appears, shown in its floating label colour.
-- **Mutations (8 mutations)** — Golden (x2), Glitch (x3), Diamond (x4), Rainbow (x5), Shadow (x6)
+- **Mutations (6 mutations)** — Golden (x2), Glitch (x3), Diamond (x4), Rainbow (x5), Shadow (x6)
   and Cosmic (x10) mutations roll at spawn and multiply
   that character's income on top of its rarity, alongside the plain unmutated roll.
 - **40 brainrots** — a roster of 40 original characters, each with its own colour and scale,
