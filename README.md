@@ -48,7 +48,7 @@ placed, and every third tsunami cycle a Golden Runaway appears — placing it pa
   and a neon arch over the spawn.
 - **Visual pass** — primitive-built character models with eyes and hats, larger character models with rarity glow rings, low drifting clouds, dressed spawn with welcome arch, checkerboard island
   with paths, dressed bases, a giant noodle-bowl centerpiece, drifting clouds and bobbing buoys,
-  rarity name cards, styled HUD with event banner, glowing pedestals, marquee bulbs.
+  rarity name cards, styled HUD with event banner, glowing pedestals, marquee bulbs, colored zone lighting, lamp light pools, bloom and sun rays, real shadows.
 - **Rebirth** — costs 1,000 cash times your rebirth count plus one; resets cash to 100 and clears
   your pads, and permanently multiplies all income by +50% per rebirth.
 - **Tsunami wave** — every 90 seconds a wall of water sweeps the map west to east. Your base
