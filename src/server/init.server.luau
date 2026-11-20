@@ -31,6 +31,8 @@ type CarriedEntry = {
 	Name: string,
 	Income: number,
 	Rarity: string,
+	CharacterName: string?,
+	IsGoldenRunaway: boolean?,
 }
 
 type PlayerState = {
@@ -43,6 +45,8 @@ type PlayerState = {
 
 local states: { [Player]: PlayerState } = {}
 local wandering: { BasePart } = {}
+local wanderingHeads: { [BasePart]: BasePart } = {}
+local waveCycleCount = 0
 
 local function rarityColorOf(name: string): Color3
 	for _, rarity in ipairs(Config.Rarities) do
@@ -51,6 +55,19 @@ local function rarityColorOf(name: string): Color3
 		end
 	end
 	return Color3.fromRGB(255, 255, 255)
+end
+
+local function rarityRankOf(name: string): number
+	for index, rarity in ipairs(Config.Rarities) do
+		if rarity.Name == name then
+			return index
+		end
+	end
+	return 1
+end
+
+local function lighterShade(color: Color3): Color3
+	return Color3.new(math.min(1, color.R + 0.18), math.min(1, color.G + 0.18), math.min(1, color.B + 0.18))
 end
 
 local function refreshIncome(player: Player, state: PlayerState)
@@ -121,8 +138,36 @@ local function onPadTouched(state: PlayerState, player: Player, pad: BasePart, h
 	text.Font = Enum.Font.SourceSansBold
 	text.Parent = gui
 	gui.Parent = visual
+	visual.Material = Enum.Material.Neon
+	pad.Material = Enum.Material.Neon
 	pad:SetAttribute("Occupied", true)
 	table.insert(state.Placed, { Pad = pad, Visual = visual, Income = carried.Income })
+	if carried.IsGoldenRunaway then
+		local stats = player:FindFirstChild("leaderstats")
+		if stats then
+			local cashValue = stats:FindFirstChild("Cash")
+			if cashValue then
+				cashValue.Value += 500
+			end
+		end
+	end
+	if carried.CharacterName then
+		local indexFolder = player:FindFirstChild("Index")
+		if not indexFolder then
+			indexFolder = Instance.new("Folder")
+			indexFolder.Name = "Index"
+			indexFolder.Parent = player
+		end
+		local entryValue = indexFolder:FindFirstChild(carried.CharacterName)
+		if not entryValue then
+			entryValue = Instance.new("BoolValue")
+			entryValue.Name = carried.CharacterName
+			entryValue.Parent = indexFolder
+		end
+		if entryValue:IsA("BoolValue") then
+			entryValue.Value = true
+		end
+	end
 	refreshIncome(player, state)
 end
 
@@ -150,6 +195,10 @@ local function setupPlayer(player: Player)
 	rebirths.Value = 0
 	rebirths.Parent = stats
 	stats.Parent = player
+
+	local indexFolder = Instance.new("Folder")
+	indexFolder.Name = "Index"
+	indexFolder.Parent = player
 
 	local base = claimFreeBase(player)
 	if not base then
@@ -186,6 +235,7 @@ Players.PlayerRemoving:Connect(function(player)
 		for _, entry in ipairs(state.Placed) do
 			entry.Visual:Destroy()
 			entry.Pad:SetAttribute("Occupied", nil)
+			entry.Pad.Material = Enum.Material.SmoothPlastic
 		end
 		states[player] = nil
 	end
@@ -193,25 +243,74 @@ end)
 
 -- Wandering characters -------------------------------------------------------
 
-local function spawnCharacter()
-	if #wandering >= Config.MaxWandering then
+local function spawnCharacterInternal(forceGolden: boolean?)
+	if not forceGolden and #wandering >= Config.MaxWandering then
 		return
 	end
 	local def = Config.RandomCharacter()
 	local rarity = Config.RollRarity()
 	local mutation = Config.RollMutation()
+	if forceGolden then
+		for _, candidate in ipairs(Config.Mutations) do
+			if candidate.Name == "Golden" then
+				mutation = candidate
+			end
+		end
+	end
 	local income = Config.IncomeFor(def, rarity, mutation)
+	local scale = def.Scale or 1
 	local body = Instance.new("Part")
 	body.Name = "BrainrotNPC"
-	body.Size = Vector3.new(3, 4, 3)
+	body.Size = Vector3.new(3 * scale, 4 * scale, 3 * scale)
 	body.Anchored = true
 	body.CanCollide = false
 	body.Color = def.Color
-	body:SetAttribute("DisplayName", Config.DisplayName(def, rarity, mutation))
+	local displayName = Config.DisplayName(def, rarity, mutation)
+	if forceGolden then
+		displayName = "GOLDEN RUNAWAY - " .. displayName
+	end
+	body:SetAttribute("DisplayName", displayName)
 	body:SetAttribute("Income", income)
 	body:SetAttribute("Rarity", rarity.Name)
-	body.Position = Vector3.new(math.random(-52, 52), 3, math.random(-52, 52))
+	body:SetAttribute("CharacterName", def.Name)
+	body:SetAttribute("IsGoldenRunaway", forceGolden == true)
+	body:SetAttribute("GoldenBonusPaid", false)
+	body:SetAttribute("Phase", math.random() * math.pi * 2)
+	body.Position = Vector3.new(math.random(-52, 52), 1 + body.Size.Y / 2, math.random(-52, 52))
 	body.Parent = Workspace
+	local head = Instance.new("Part")
+	head.Name = "BrainrotHead"
+	head.Size = body.Size * 0.6
+	head.Anchored = true
+	head.CanCollide = false
+	head.Color = lighterShade(def.Color)
+	head.Position = body.Position + Vector3.new(0, body.Size.Y / 2 + head.Size.Y / 2, 0)
+	head.Parent = Workspace
+	wanderingHeads[body] = head
+	local rank = rarityRankOf(rarity.Name)
+	if rank >= 4 then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = "RaritySparkles"
+		emitter.Rate = 20
+		emitter.Lifetime = NumberRange.new(0.6, 1.2)
+		emitter.Parent = body
+	end
+	if rank >= 5 then
+		local light = Instance.new("PointLight")
+		light.Name = "RarityGlow"
+		light.Color = rarity.Color
+		light.Brightness = 2
+		light.Range = 12
+		light.Parent = body
+	end
+	if forceGolden then
+		local goldLight = Instance.new("PointLight")
+		goldLight.Name = "GoldenGlow"
+		goldLight.Color = Color3.fromRGB(255, 215, 0)
+		goldLight.Brightness = 3
+		goldLight.Range = 14
+		goldLight.Parent = body
+	end
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
 	gui.Size = UDim2.fromOffset(220, 50)
@@ -220,7 +319,7 @@ local function spawnCharacter()
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 1)
 	text.BackgroundTransparency = 1
-	text.Text = Config.DisplayName(def, rarity, mutation) .. "\n$" .. tostring(income) .. "/s"
+	text.Text = displayName .. "\n$" .. tostring(income) .. "/s"
 	text.TextColor3 = rarity.Color
 	text.TextStrokeTransparency = 0.4
 	text.TextScaled = true
@@ -247,18 +346,38 @@ local function spawnCharacter()
 		if not state or state.Carried then
 			return
 		end
+		local isGolden = body:GetAttribute("IsGoldenRunaway") == true
+		local bonusPaid = body:GetAttribute("GoldenBonusPaid") == true
 		state.Carried = {
 			Name = body:GetAttribute("DisplayName"),
 			Income = body:GetAttribute("Income"),
 			Rarity = body:GetAttribute("Rarity"),
+			CharacterName = body:GetAttribute("CharacterName"),
+			IsGoldenRunaway = isGolden and not bonusPaid,
 		}
+		if isGolden then
+			body:SetAttribute("GoldenBonusPaid", true)
+		end
 		player:SetAttribute("Carrying", state.Carried.Name)
 		local idx = table.find(wandering, body)
 		if idx then
 			table.remove(wandering, idx)
 		end
+		local headPart = wanderingHeads[body]
+		wanderingHeads[body] = nil
+		if headPart then
+			headPart:Destroy()
+		end
 		body:Destroy()
 	end)
+end
+
+local function spawnCharacter()
+	spawnCharacterInternal(false)
+end
+
+local function spawnGoldenRunaway()
+	spawnCharacterInternal(true)
 end
 
 task.spawn(function()
@@ -269,6 +388,7 @@ task.spawn(function()
 end)
 
 RunService.Heartbeat:Connect(function(dt)
+	local now = os.clock()
 	for _, body in ipairs(wandering) do
 		local pos = body.Position
 		local tx = body:GetAttribute("TargetX")
@@ -276,12 +396,24 @@ RunService.Heartbeat:Connect(function(dt)
 		local dx = tx - pos.X
 		local dz = tz - pos.Z
 		local dist = math.sqrt(dx * dx + dz * dz)
+		local phase = body:GetAttribute("Phase") or 0
+		local bob = math.sin(now * 3 + phase) * 0.3
+		local baseY = 1 + body.Size.Y / 2
+		local newPos = pos
 		if dist < 2 then
 			body:SetAttribute("TargetX", math.random(-52, 52))
 			body:SetAttribute("TargetZ", math.random(-52, 52))
+			newPos = Vector3.new(pos.X, baseY + bob, pos.Z)
 		else
 			local step = 6 * dt
-			body.Position = Vector3.new(pos.X + dx / dist * step, 3, pos.Z + dz / dist * step)
+			newPos = Vector3.new(pos.X + dx / dist * step, baseY + bob, pos.Z + dz / dist * step)
+		end
+		local spin = (now * 0.8 + phase) % (math.pi * 2)
+		body.CFrame = CFrame.new(newPos) * CFrame.Angles(0, spin, 0)
+		local head = wanderingHeads[body]
+		if head then
+			local headPos = newPos + Vector3.new(0, body.Size.Y / 2 + head.Size.Y / 2, 0)
+			head.CFrame = CFrame.new(headPos) * CFrame.Angles(0, spin, 0)
 		end
 	end
 end)
@@ -330,6 +462,7 @@ rebirthRemote.OnServerEvent:Connect(function(player)
 	for _, entry in ipairs(state.Placed) do
 		entry.Visual:Destroy()
 		entry.Pad:SetAttribute("Occupied", nil)
+		entry.Pad.Material = Enum.Material.SmoothPlastic
 	end
 	state.Placed = {}
 	refreshIncome(player, state)
@@ -379,6 +512,10 @@ task.spawn(function()
 		end
 		wavePart.Position = Vector3.new(0, -60, 0)
 		Workspace:SetAttribute("WaveWarning", false)
+		waveCycleCount += 1
+		if waveCycleCount % 3 == 0 then
+			spawnGoldenRunaway()
+		end
 	end
 end)
 

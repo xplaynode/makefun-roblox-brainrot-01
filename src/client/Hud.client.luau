@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local rebirthRemote = ReplicatedStorage:WaitForChild("RebirthRequest")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "BrainrotHud"
@@ -59,6 +60,74 @@ rebirthButton.Text = "Rebirth"
 rebirthButton.Parent = panel
 rebirthButton.MouseButton1Click:Connect(function()
 	rebirthRemote:FireServer()
+end)
+
+local indexButton = Instance.new("TextButton")
+indexButton.Name = "IndexButton"
+indexButton.AnchorPoint = Vector2.new(1, 1)
+indexButton.Position = UDim2.new(1, -12, 1, -12)
+indexButton.Size = UDim2.fromOffset(120, 36)
+indexButton.BackgroundColor3 = Color3.fromRGB(40, 120, 160)
+indexButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+indexButton.TextSize = 16
+indexButton.Font = Enum.Font.SourceSansBold
+indexButton.Text = "INDEX"
+indexButton.Parent = gui
+
+local indexPanel = Instance.new("ScrollingFrame")
+indexPanel.Name = "IndexPanel"
+indexPanel.AnchorPoint = Vector2.new(1, 1)
+indexPanel.Position = UDim2.new(1, -12, 1, -56)
+indexPanel.Size = UDim2.fromOffset(280, 320)
+indexPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
+indexPanel.BackgroundTransparency = 0.15
+indexPanel.BorderSizePixel = 0
+indexPanel.Visible = false
+indexPanel.ScrollBarThickness = 6
+indexPanel.CanvasSize = UDim2.fromOffset(0, #Config.Characters * 26)
+indexPanel.Parent = gui
+
+local indexLayout = Instance.new("UIListLayout")
+indexLayout.SortOrder = Enum.SortOrder.LayoutOrder
+indexLayout.Padding = UDim.new(0, 2)
+indexLayout.Parent = indexPanel
+
+local function refreshIndexPanel()
+	for _, child in ipairs(indexPanel:GetChildren()) do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	local indexFolder = player:FindFirstChild("Index")
+	for order, characterDef in ipairs(Config.Characters) do
+		local label = Instance.new("TextLabel")
+		label.Name = "IndexEntry" .. tostring(order)
+		label.LayoutOrder = order
+		label.Size = UDim2.new(1, -8, 0, 24)
+		label.BackgroundTransparency = 1
+		label.TextSize = 16
+		label.Font = Enum.Font.SourceSansBold
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		local foundValue = nil
+		if indexFolder then
+			foundValue = indexFolder:FindFirstChild(characterDef.Name)
+		end
+		if foundValue and foundValue:IsA("BoolValue") and foundValue.Value then
+			label.Text = characterDef.Name
+			label.TextColor3 = characterDef.Color
+		else
+			label.Text = "???"
+			label.TextColor3 = Color3.fromRGB(150, 150, 150)
+		end
+		label.Parent = indexPanel
+	end
+end
+
+indexButton.MouseButton1Click:Connect(function()
+	indexPanel.Visible = not indexPanel.Visible
+	if indexPanel.Visible then
+		refreshIndexPanel()
+	end
 end)
 
 gui.Parent = player:WaitForChild("PlayerGui")

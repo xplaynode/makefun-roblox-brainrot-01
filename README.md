@@ -8,11 +8,14 @@ An original 3D brainrot collection game for Roblox, built for make.fun's roblox-
 https://make.fun/bounty/roblox-brainrot-01
 
 You spawn at your own base — a raised platform with six collection pads — beside a sunny spawn
-field where absurd original characters wander: Sir Noodleknight, Turbo Toaster, Baron Von Bubbles,
+field on a dressed island (ocean, sand shores, a lighthouse, lantern posts, palm trees and extra
+trees) where 40 absurd original characters wander: Sir Noodleknight, Turbo Toaster, Baron Von Bubbles,
 Professor Picklehat, DJ Wafflebot, Madame Marshmallow, Captain Crumb, Robo Ravioli, Siren Sushi,
-Wizard Wobble, Count Churro and the Mega Meatball Sage. Touch one to pick it up (one at a time),
+Wizard Wobble, Count Churro, the Mega Meatball Sage and 28 more noodle, knight, bay and food
+creations up to Grand Noodle Neptune. Touch one to pick it up (one at a time),
 carry it home and step on an empty pad to place it. Every placed character earns you cash every
-second, forever, until you rebirth.
+second, forever, until you rebirth. A collection index in the HUD tracks which of the 40 you have
+placed, and every third tsunami cycle a Golden Runaway appears — placing it pays a bonus 500 cash.
 
 ## How to play
 
@@ -27,10 +30,22 @@ second, forever, until you rebirth.
 
 ## Systems
 
-- **Rarity ladder** — Common (x1 income) → Rare (x3) → Epic (x8) → Legendary (x20) → Mythic (x50),
+- **Rarity ladder (8 rarities)** — Common (x1 income) → Uncommon (x2) → Rare (x3) → Epic (x8) →
+  Legendary (x20) → Divine (x80) → Mythic (x50) → Brainrot (x150),
   rolled by spawn weight every time a character appears, shown in its floating label colour.
-- **Mutations** — Golden (x2), Glitch (x3) and Rainbow (x5) mutations roll at spawn and multiply
-  that character's income on top of its rarity.
+- **Mutations (8 mutations)** — Golden (x2), Glitch (x3), Diamond (x4), Rainbow (x5), Shadow (x6)
+  and Cosmic (x10) mutations roll at spawn and multiply
+  that character's income on top of its rarity, alongside the plain unmutated roll.
+- **40 brainrots** — a roster of 40 original characters, each with its own colour and scale,
+  wandering the field (up to 18 at once), bobbing and spinning as they roam, with heads,
+  sparkles on Epic and above and a glow on Legendary and above.
+- **Golden Runaway event** — every third tsunami cycle one extra Golden character spawns with a
+  gold light and a "GOLDEN RUNAWAY - " label; placing it on a pad pays a one-time bonus of 500 cash.
+- **Collection index** — the INDEX button in the HUD lists all 40 characters; placed characters
+  show in their own colour, the rest stay hidden as "???".
+- **Dressed island** — ocean and sand framing the island, a lighthouse on the north-east water
+  edge, lantern posts around the field and paths, palm trees at the edges, extra trees and rocks,
+  and a neon arch over the spawn.
 - **Rebirth** — costs 1,000 cash times your rebirth count plus one; resets cash to 100 and clears
   your pads, and permanently multiplies all income by +50% per rebirth.
 - **Tsunami wave** — every 90 seconds a wall of water sweeps the map west to east. Your base
