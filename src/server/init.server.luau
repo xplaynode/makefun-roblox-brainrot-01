@@ -212,6 +212,22 @@ local function buildAccessories(head: BasePart, def, rarity): { AccessoryEntry }
 			addAccessory(list, head, horn, CFrame.new(side * (headSize.X / 2 + 0.08 * scale), topY - 0.15 * scale, 0) * CFrame.Angles(0, 0, side * -0.45))
 		end
 	end
+	-- Rarity glow ring: a flat neon disc under the body, in the character's
+	-- rarity colour, so every wandering character pops in screenshots. It
+	-- rides in the same accessories list as the eyes and hats, so the
+	-- Heartbeat loop keeps it under the body and despawn destroys it. Its
+	-- offset is relative to the head: the head sits bodyHeight + half the
+	-- head height above the body's base, so the ring hangs that far below
+	-- the head centre, lifted 0.08 so the 0.15-thick disc rests on the
+	-- ground instead of sinking into it. The cylinder is tipped onto its
+	-- side like the pedestals are, which lays the disc flat; the head's
+	-- spin is around the vertical axis, so the disc stays flat as it turns.
+	local bodyHeight = headSize.Y / 0.6
+	local ringDiameter = 1.4 * (headSize.X / 0.6)
+	local ring = newAccessory("BrainrotGlowRing", Vector3.new(0.15, ringDiameter, ringDiameter), rarity.Color)
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Material = Enum.Material.Neon
+	addAccessory(list, head, ring, CFrame.new(0, -(bodyHeight + headSize.Y / 2) + 0.08, 0) * CFrame.Angles(0, 0, math.pi / 2))
 	return list
 end
 
@@ -242,7 +258,7 @@ local ambientBalloons: { AmbientEntry } = {}
 
 -- Sign labels: the Rojo project format cannot express a UDim2 Size for the
 -- SurfaceGui labels on the signs, so size them to fill their signs here.
-for _, signName in ipairs({ "WelcomeSign", "NoodleSign" }) do
+for _, signName in ipairs({ "WelcomeSign", "NoodleSign", "SpawnArchTop" }) do
 	local sign = Workspace:FindFirstChild(signName)
 	if sign then
 		local gui = sign:FindFirstChildOfClass("SurfaceGui")

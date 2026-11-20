@@ -46,7 +46,7 @@ placed, and every third tsunami cycle a Golden Runaway appears — placing it pa
 - **Dressed island** — ocean and sand framing the island, a lighthouse on the north-east water
   edge, lantern posts around the field and paths, palm trees at the edges, extra trees and rocks,
   and a neon arch over the spawn.
-- **Visual pass** — primitive-built character models with eyes and hats, checkerboard island
+- **Visual pass** — primitive-built character models with eyes and hats, larger character models with rarity glow rings, low drifting clouds, dressed spawn with welcome arch, checkerboard island
   with paths, dressed bases, a giant noodle-bowl centerpiece, drifting clouds and bobbing buoys,
   rarity name cards, styled HUD with event banner, glowing pedestals, marquee bulbs.
 - **Rebirth** — costs 1,000 cash times your rebirth count plus one; resets cash to 100 and clears
