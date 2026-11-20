@@ -46,6 +46,8 @@ placed, and every third tsunami cycle a Golden Runaway appears — placing it pa
 - **Dressed island** — ocean and sand framing the island, a lighthouse on the north-east water
   edge, lantern posts around the field and paths, palm trees at the edges, extra trees and rocks,
   and a neon arch over the spawn.
+- **Visual pass** — primitive-built character models with eyes and hats, checkerboard island
+  with paths, dressed bases, a giant noodle-bowl centerpiece, drifting clouds and bobbing buoys.
 - **Rebirth** — costs 1,000 cash times your rebirth count plus one; resets cash to 100 and clears
   your pads, and permanently multiplies all income by +50% per rebirth.
 - **Tsunami wave** — every 90 seconds a wall of water sweeps the map west to east. Your base

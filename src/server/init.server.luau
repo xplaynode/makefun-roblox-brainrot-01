@@ -46,6 +46,13 @@ type PlayerState = {
 local states: { [Player]: PlayerState } = {}
 local wandering: { BasePart } = {}
 local wanderingHeads: { [BasePart]: BasePart } = {}
+
+type AccessoryEntry = {
+	Part: BasePart,
+	Offset: CFrame,
+}
+
+local wanderingAccessories: { [BasePart]: { AccessoryEntry } } = {}
 local waveCycleCount = 0
 
 local function rarityColorOf(name: string): Color3
@@ -68,6 +75,149 @@ end
 
 local function lighterShade(color: Color3): Color3
 	return Color3.new(math.min(1, color.R + 0.18), math.min(1, color.G + 0.18), math.min(1, color.B + 0.18))
+end
+
+local function darkerShade(color: Color3): Color3
+	return Color3.new(color.R * 0.55, color.G * 0.55, color.B * 0.55)
+end
+
+-- Visual accessories -----------------------------------------------------------
+-- Every accessory is a plain primitive that follows the head through the same
+-- per-frame repositioning the head itself gets from the body: each entry stores
+-- a CFrame offset relative to the head, and the Heartbeat loop applies it.
+
+local function newAccessory(name: string, size: Vector3, color: Color3): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.Anchored = false
+	part.CanCollide = false
+	part.Massless = true
+	part.Color = color
+	return part
+end
+
+local function addAccessory(list: { AccessoryEntry }, head: BasePart, part: BasePart, offset: CFrame)
+	part.CFrame = head.CFrame * offset
+	part.Parent = Workspace
+	table.insert(list, { Part = part, Offset = offset })
+end
+
+local function buildAccessories(head: BasePart, def, rarity): { AccessoryEntry }
+	local list: { AccessoryEntry } = {}
+	local scale = def.Scale or 1
+	local headSize = head.Size
+	local frontZ = -headSize.Z / 2
+	local topY = headSize.Y / 2
+	-- Eyes: a white ball with a smaller black pupil just in front of it, on
+	-- the head's front face (-Z, the way the head's CFrame faces).
+	for _, side in ipairs({ -1, 1 }) do
+		local eye = newAccessory("BrainrotEye", Vector3.new(0.62, 0.62, 0.62) * scale, Color3.fromRGB(255, 255, 255))
+		eye.Shape = Enum.PartType.Ball
+		addAccessory(list, head, eye, CFrame.new(side * 0.38 * scale, 0.18 * scale, frontZ - 0.12 * scale))
+		local pupil = newAccessory("BrainrotPupil", Vector3.new(0.3, 0.3, 0.3) * scale, Color3.fromRGB(20, 20, 25))
+		pupil.Shape = Enum.PartType.Ball
+		addAccessory(list, head, pupil, CFrame.new(side * 0.38 * scale, 0.18 * scale, frontZ - 0.38 * scale))
+	end
+	local hat = def.Hat or "none"
+	if hat == "cap" then
+		local dome = newAccessory("BrainrotHat", Vector3.new(0.35 * scale, 1.95 * scale, 1.95 * scale), darkerShade(def.Color))
+		dome.Shape = Enum.PartType.Cylinder
+		addAccessory(list, head, dome, CFrame.new(0, topY + 0.12 * scale, 0) * CFrame.Angles(0, 0, math.pi / 2))
+		local brim = newAccessory("BrainrotHatBrim", Vector3.new(1.05 * scale, 0.16 * scale, 0.85 * scale), darkerShade(def.Color))
+		addAccessory(list, head, brim, CFrame.new(0, topY + 0.02 * scale, frontZ - 0.35 * scale))
+	elseif hat == "crown" then
+		local gold = Color3.fromRGB(255, 200, 40)
+		local band = newAccessory("BrainrotHat", Vector3.new(1.75 * scale, 0.5 * scale, 1.75 * scale), gold)
+		addAccessory(list, head, band, CFrame.new(0, topY + 0.22 * scale, 0))
+		for _, dx in ipairs({ -0.58, 0, 0.58 }) do
+			local spike = newAccessory("BrainrotHatSpike", Vector3.new(0.36 * scale, 0.48 * scale, 0.36 * scale), gold)
+			addAccessory(list, head, spike, CFrame.new(dx * scale, topY + 0.68 * scale, 0))
+		end
+	elseif hat == "antenna" then
+		local stalk = newAccessory("BrainrotHat", Vector3.new(1.15 * scale, 0.13 * scale, 0.13 * scale), Color3.fromRGB(60, 60, 70))
+		stalk.Shape = Enum.PartType.Cylinder
+		addAccessory(list, head, stalk, CFrame.new(0, topY + 0.55 * scale, 0) * CFrame.Angles(0, 0, math.pi / 2))
+		local tip = newAccessory("BrainrotHatTip", Vector3.new(0.52, 0.52, 0.52) * scale, rarity.Color)
+		tip.Shape = Enum.PartType.Ball
+		tip.Material = Enum.Material.Neon
+		addAccessory(list, head, tip, CFrame.new(0, topY + 1.22 * scale, 0))
+	elseif hat == "chef" then
+		local band = newAccessory("BrainrotHat", Vector3.new(0.42 * scale, 1.72 * scale, 1.72 * scale), Color3.fromRGB(235, 235, 235))
+		band.Shape = Enum.PartType.Cylinder
+		addAccessory(list, head, band, CFrame.new(0, topY + 0.14 * scale, 0) * CFrame.Angles(0, 0, math.pi / 2))
+		local puff = newAccessory("BrainrotHatPuff", Vector3.new(1.85 * scale, 1.0 * scale, 1.85 * scale), Color3.fromRGB(255, 255, 255))
+		puff.Shape = Enum.PartType.Ball
+		addAccessory(list, head, puff, CFrame.new(0, topY + 0.55 * scale, 0))
+	elseif hat == "horns" then
+		for _, side in ipairs({ -1, 1 }) do
+			local horn = Instance.new("WedgePart")
+			horn.Name = "BrainrotHatHorn"
+			horn.Size = Vector3.new(0.42 * scale, 0.85 * scale, 0.55 * scale)
+			horn.Anchored = false
+			horn.CanCollide = false
+			horn.Massless = true
+			horn.Color = Color3.fromRGB(245, 235, 200)
+			addAccessory(list, head, horn, CFrame.new(side * (headSize.X / 2 + 0.08 * scale), topY - 0.15 * scale, 0) * CFrame.Angles(0, 0, side * -0.45))
+		end
+	end
+	return list
+end
+
+local function destroyAccessories(body: BasePart)
+	local list = wanderingAccessories[body]
+	wanderingAccessories[body] = nil
+	if list then
+		for _, entry in ipairs(list) do
+			entry.Part:Destroy()
+		end
+	end
+end
+
+-- Ambient world motion ---------------------------------------------------------
+-- Clouds, buoys and balloons are static parts in the project file; the server
+-- finds them by name prefix once at startup and animates them in Heartbeat.
+
+type AmbientEntry = {
+	Part: BasePart,
+	BaseY: number,
+	BaseX: number,
+	Phase: number,
+}
+
+local ambientClouds: { AmbientEntry } = {}
+local ambientBuoys: { AmbientEntry } = {}
+local ambientBalloons: { AmbientEntry } = {}
+
+-- Sign labels: the Rojo project format cannot express a UDim2 Size for the
+-- SurfaceGui labels on the signs, so size them to fill their signs here.
+for _, signName in ipairs({ "WelcomeSign", "NoodleSign" }) do
+	local sign = Workspace:FindFirstChild(signName)
+	if sign then
+		local gui = sign:FindFirstChildOfClass("SurfaceGui")
+		local label = gui and gui:FindFirstChildOfClass("TextLabel")
+		if label then
+			label.Size = UDim2.fromScale(1, 1)
+		end
+	end
+end
+
+for _, child in ipairs(Workspace:GetChildren()) do
+	if child:IsA("BasePart") then
+		local entry: AmbientEntry = {
+			Part = child,
+			BaseY = child.Position.Y,
+			BaseX = child.Position.X,
+			Phase = (child.Position.X + child.Position.Z) * 0.15,
+		}
+		if string.sub(child.Name, 1, 5) == "Cloud" then
+			table.insert(ambientClouds, entry)
+		elseif string.sub(child.Name, 1, 4) == "Buoy" then
+			table.insert(ambientBuoys, entry)
+		elseif string.match(child.Name, "^Balloon%d+$") then
+			table.insert(ambientBalloons, entry)
+		end
+	end
 end
 
 local function refreshIncome(player: Player, state: PlayerState)
@@ -287,6 +437,7 @@ local function spawnCharacterInternal(forceGolden: boolean?)
 	head.Position = body.Position + Vector3.new(0, body.Size.Y / 2 + head.Size.Y / 2, 0)
 	head.Parent = Workspace
 	wanderingHeads[body] = head
+	wanderingAccessories[body] = buildAccessories(head, def, rarity)
 	local rank = rarityRankOf(rarity.Name)
 	if rank >= 4 then
 		local emitter = Instance.new("ParticleEmitter")
@@ -368,6 +519,7 @@ local function spawnCharacterInternal(forceGolden: boolean?)
 		if headPart then
 			headPart:Destroy()
 		end
+		destroyAccessories(body)
 		body:Destroy()
 	end)
 end
@@ -414,7 +566,34 @@ RunService.Heartbeat:Connect(function(dt)
 		if head then
 			local headPos = newPos + Vector3.new(0, body.Size.Y / 2 + head.Size.Y / 2, 0)
 			head.CFrame = CFrame.new(headPos) * CFrame.Angles(0, spin, 0)
+			local accessories = wanderingAccessories[body]
+			if accessories then
+				for _, entry in ipairs(accessories) do
+					entry.Part.CFrame = head.CFrame * entry.Offset
+					entry.Part.AssemblyLinearVelocity = Vector3.zero
+					entry.Part.AssemblyAngularVelocity = Vector3.zero
+				end
+			end
 		end
+	end
+	-- Ambient motion: clouds drift and wrap, buoys and balloons bob.
+	for _, entry in ipairs(ambientClouds) do
+		local part = entry.Part
+		local newX = part.Position.X + dt * 1.5
+		if newX > 240 then
+			newX -= 480
+		end
+		part.Position = Vector3.new(newX, entry.BaseY, part.Position.Z)
+	end
+	for _, entry in ipairs(ambientBuoys) do
+		local part = entry.Part
+		local bobY = entry.BaseY + math.sin(now * 1.3 + entry.Phase) * 0.35
+		part.Position = Vector3.new(part.Position.X, bobY, part.Position.Z)
+	end
+	for _, entry in ipairs(ambientBalloons) do
+		local part = entry.Part
+		local bobY = entry.BaseY + math.sin(now * 0.9 + entry.Phase) * 0.3
+		part.Position = Vector3.new(part.Position.X, bobY, part.Position.Z)
 	end
 end)
 
