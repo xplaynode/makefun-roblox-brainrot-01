@@ -21,6 +21,11 @@ local rebirthRemote = Instance.new("RemoteEvent")
 rebirthRemote.Name = "RebirthRequest"
 rebirthRemote.Parent = ReplicatedStorage
 
+-- Remote the server fires so the HUD can flash its event banner.
+local eventBannerRemote = Instance.new("RemoteEvent")
+eventBannerRemote.Name = "EventBanner"
+eventBannerRemote.Parent = ReplicatedStorage
+
 type PlacedEntry = {
 	Pad: BasePart,
 	Visual: BasePart,
@@ -31,6 +36,7 @@ type CarriedEntry = {
 	Name: string,
 	Income: number,
 	Rarity: string,
+	Mutation: string?,
 	CharacterName: string?,
 	IsGoldenRunaway: boolean?,
 }
@@ -79,6 +85,51 @@ end
 
 local function darkerShade(color: Color3): Color3
 	return Color3.new(color.R * 0.55, color.G * 0.55, color.B * 0.55)
+end
+
+-- Framed three-line name card shown over a character: display name on the
+-- first line, rarity (and mutation) on the second, income on the third.
+local function makeNameCard(parent: BasePart, line1: string, line2: string, line2Color: Color3, income: number)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.fromOffset(220, 70)
+	gui.StudsOffset = Vector3.new(0, 3.6, 0)
+	gui.AlwaysOnTop = true
+	local frame = Instance.new("Frame")
+	frame.Name = "Card"
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Color3.fromRGB(22, 22, 34)
+	frame.BackgroundTransparency = 0.25
+	frame.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = frame
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = line2Color
+	stroke.Thickness = 2
+	stroke.Parent = frame
+	local function cardLine(name: string, y: number, height: number, color: Color3): TextLabel
+		local label = Instance.new("TextLabel")
+		label.Name = name
+		label.Position = UDim2.fromOffset(6, y)
+		label.Size = UDim2.fromOffset(208, height)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = color
+		label.TextStrokeTransparency = 0.4
+		label.TextScaled = true
+		label.Font = Enum.Font.SourceSansBold
+		label.TextXAlignment = Enum.TextXAlignment.Center
+		label.Parent = frame
+		return label
+	end
+	local nameLabel = cardLine("NameLine", 2, 24, Color3.fromRGB(255, 255, 255))
+	nameLabel.Text = line1
+	local rarityLabel = cardLine("RarityLine", 27, 19, line2Color)
+	rarityLabel.Text = line2
+	local incomeLabel = cardLine("IncomeLine", 47, 19, Color3.fromRGB(90, 255, 120))
+	incomeLabel.Text = "$" .. tostring(income) .. "/s"
+	frame.Parent = gui
+	gui.Parent = parent
 end
 
 -- Visual accessories -----------------------------------------------------------
@@ -265,29 +316,34 @@ local function onPadTouched(state: PlayerState, player: Player, pad: BasePart, h
 	local carried = state.Carried
 	state.Carried = nil
 	player:SetAttribute("Carrying", "")
+	local rarityColor = rarityColorOf(carried.Rarity)
 	local visual = Instance.new("Part")
 	visual.Name = "PlacedFigure"
 	visual.Size = Vector3.new(3, 4, 3)
 	visual.Anchored = true
 	visual.CanCollide = false
-	visual.Color = rarityColorOf(carried.Rarity)
-	visual.Position = pad.Position + Vector3.new(0, 2.5, 0)
+	visual.Color = rarityColor
+	-- The figure stands on top of its glowing pedestal (0.6 tall, resting on
+	-- the pad), so its centre sits 0.6 higher than it did on the pad alone.
+	visual.Position = pad.Position + Vector3.new(0, 3.1, 0)
 	visual.Parent = Workspace
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Label"
-	gui.Size = UDim2.fromOffset(220, 50)
-	gui.StudsOffset = Vector3.new(0, 3.4, 0)
-	gui.AlwaysOnTop = true
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Text = carried.Name .. "\n$" .. tostring(carried.Income) .. "/s"
-	text.TextColor3 = Color3.fromRGB(255, 255, 255)
-	text.TextStrokeTransparency = 0.4
-	text.TextScaled = true
-	text.Font = Enum.Font.SourceSansBold
-	text.Parent = gui
-	gui.Parent = visual
+	-- Glowing pedestal under the figure. It is a child of the figure, so the
+	-- existing destroy-on-unclaim lifecycle takes it away with the figure.
+	local pedestal = Instance.new("Part")
+	pedestal.Name = "Pedestal"
+	pedestal.Shape = Enum.PartType.Cylinder
+	pedestal.Size = Vector3.new(0.6, 3.8, 3.8)
+	pedestal.Anchored = true
+	pedestal.CanCollide = false
+	pedestal.Material = Enum.Material.Neon
+	pedestal.Color = rarityColor
+	pedestal.CFrame = CFrame.new(pad.Position + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	pedestal.Parent = visual
+	local placedLine2 = carried.Rarity
+	if carried.Mutation and carried.Mutation ~= "" then
+		placedLine2 = carried.Rarity .. " " .. carried.Mutation
+	end
+	makeNameCard(visual, carried.Name, placedLine2, rarityColor, carried.Income)
 	visual.Material = Enum.Material.Neon
 	pad.Material = Enum.Material.Neon
 	pad:SetAttribute("Occupied", true)
@@ -422,6 +478,7 @@ local function spawnCharacterInternal(forceGolden: boolean?)
 	body:SetAttribute("DisplayName", displayName)
 	body:SetAttribute("Income", income)
 	body:SetAttribute("Rarity", rarity.Name)
+	body:SetAttribute("Mutation", mutation.Name)
 	body:SetAttribute("CharacterName", def.Name)
 	body:SetAttribute("IsGoldenRunaway", forceGolden == true)
 	body:SetAttribute("GoldenBonusPaid", false)
@@ -462,21 +519,19 @@ local function spawnCharacterInternal(forceGolden: boolean?)
 		goldLight.Range = 14
 		goldLight.Parent = body
 	end
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Label"
-	gui.Size = UDim2.fromOffset(220, 50)
-	gui.StudsOffset = Vector3.new(0, 3.4, 0)
-	gui.AlwaysOnTop = true
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Text = displayName .. "\n$" .. tostring(income) .. "/s"
-	text.TextColor3 = rarity.Color
-	text.TextStrokeTransparency = 0.4
-	text.TextScaled = true
-	text.Font = Enum.Font.SourceSansBold
-	text.Parent = gui
-	gui.Parent = body
+	local cardLine2 = rarity.Name
+	if mutation.Name ~= "" then
+		cardLine2 = rarity.Name .. " " .. mutation.Name
+	end
+	if forceGolden then
+		-- The display name already carries the GOLDEN RUNAWAY prefix on
+		-- line 1; repeat it on line 2 so the card shouts it twice.
+		cardLine2 = "GOLDEN RUNAWAY - " .. cardLine2
+	end
+	makeNameCard(body, displayName, cardLine2, rarity.Color, income)
+	if forceGolden then
+		eventBannerRemote:FireAllClients("golden")
+	end
 	body:SetAttribute("TargetX", body.Position.X)
 	body:SetAttribute("TargetZ", body.Position.Z)
 	table.insert(wandering, body)
@@ -503,6 +558,7 @@ local function spawnCharacterInternal(forceGolden: boolean?)
 			Name = body:GetAttribute("DisplayName"),
 			Income = body:GetAttribute("Income"),
 			Rarity = body:GetAttribute("Rarity"),
+			Mutation = body:GetAttribute("Mutation"),
 			CharacterName = body:GetAttribute("CharacterName"),
 			IsGoldenRunaway = isGolden and not bonusPaid,
 		}
